@@ -1,0 +1,379 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>출입문게임</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      background-color: #bfbfbf;
+      margin: 0;
+      padding-top: 10px;
+      transition: background 0.5s;
+    }
+    body.fever {
+      background: linear-gradient(270deg, red, orange, yellow, green, blue, indigo, violet);
+      background-size: 1400% 1400%;
+      animation: rainbow 5s linear infinite;
+    }
+    @keyframes rainbow {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 100% 50%; }
+    }
+#full {
+  width: 400px;
+  margin: 0 auto;
+}
+    #highscore {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-weight: bold;
+      background: rgba(255,255,255,0.8);
+      padding: 5px 10px;
+      border-radius: 8px;
+    }
+    #scorebox {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-weight: bold;
+      background: rgba(255,255,255,0.8);
+      padding: 5px 10px;
+      border-radius: 8px;
+    }
+    #game {
+      margin-top: 0px;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .emoji {
+      font-size: 60px;
+      margin: 8.5px;
+    }
+    .side-hint {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 48px;
+      opacity: 1.0;
+    }
+    #leftHint {
+      left: 10px;
+    }
+    #rightHint {
+      right: 10px;
+    }
+    button {
+      font-size: 20px;
+      margin: 10px;
+      padding: 10px 20px;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+    }
+    #status {
+      font-size: 18px;
+      margin: 10px 0;
+    }
+    #bar-container {
+      width: 80%;
+      height: 30px;
+      background: #999999;
+      margin: 10px auto;
+      border-radius: 10px;
+      overflow: hidden;
+      position: relative;
+    }
+    #bar {
+      height: 100%;
+      background: #4caf50;
+      width: 100%;
+      position: relative;
+      transition: width 0.5s;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #bar.fever {
+      background: gray !important;
+    }
+    #bar-text {
+      color: white;
+      font-weight: bold;
+      text-shadow: 1px 1px 2px black;
+      pointer-events: none;
+      user-select: none;
+    }
+.control-button {
+  width: 150px;
+  height: 60px;
+  font-size: 18px;
+  text-align: center;
+  line-height: 1.3;
+  padding: 0;
+  display: inline-block;
+  vertical-align: middle;
+   touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+  </style>
+</head>
+<body>
+<div id="full">
+  <div id="highscore">최고 점수: 0</div><button style="position: absolute; top: 50px; left: 10px; font-size: 16px; margin: 0px; font-weight: bold; background: rgba(255,255,255,0.8); padding: 3px 8px; border-radius: 8px;" onclick="resetHighScore()">최고 점수 초기화</button>
+  <div id="scorebox">점수: <span id="score">0</span></div>
+  <h1 style="display: inline-block; background: rgba(255,255,255,0.8); border-radius: 10px;">출입문게임</h1>
+  <p style="display: inline-block; background: rgba(255,255,255,0.8); font-size: 16px; color: #333; margin: 5px 0 15px; border-radius: 5px;">
+    방향키나 버튼으로 사람들을 올바른 출입문으로 보내주세요!
+</p>
+  <div>
+    <label for="list">캐릭터 선택:</label>
+    <select id="list">
+      <option value="male">남성(어려움)</option>
+      <option value="female">여성(어려움)</option>
+	<option value="train">열차(보통)</option>
+	<option value="hand">손(보통)</option>
+	<option value="fruit">과일(쉬움)</option>
+	<option value="animal">동물(쉬움)</option>
+    </select>
+    <button id="startButton" onclick="startGame()">게임 시작 (Enter)</button>
+  </div>
+  <div id="game">
+    <div class="side-hint" id="leftHint">⬅️</div>
+    <div id="emojiQueue" style="position: relative; height: 350px; width: 100px; margin-bottom: 20px; margin-left: auto; margin-right: auto;"></div>
+    <div class="side-hint" id="rightHint">➡️</div>
+  </div>
+  <div>
+<button class="control-button" onclick="choose('left')">왼쪽<br>(왼쪽 방향키)</button>
+<button class="control-button" onclick="choose('right')">오른쪽<br>(오른쪽 방향키)</button>
+  </div>
+  <div id="status" style="display: inline-block; background: rgba(255,255,255,0.8); border-radius: 5px;">
+    연속 성공: <span id="streak">0</span> / 20<br>
+    피버타임: <span id="fever">비활성</span>
+  </div>
+  <div id="bar-container">
+    <div id="bar"><span id="bar-text">30초</span></div>
+  </div>
+</div>
+  <script>
+    const emojiSet = {
+      male: ["👷", "👷🏻‍♂️", "👷🏼‍♂️", "👷🏽‍♂️", "👷🏾‍♂️", "👷🏿‍♂️"],
+      female: ["👷‍♀️", "👷🏻‍♀️", "👷🏼‍♀️", "👷🏽‍♀️", "👷🏾‍♀️", "👷🏿‍♀️"],
+	train: ["🚄","🚅","🚈","🚝","🚠","🚂"],
+	hand: ["👈","👉","👆","👇","🤛","🤜"],
+	fruit: ["🍎","🍌","🥝","🍇","🍋","🍒"],
+	animal: ["🐶","🐱","🐷","🐼","🐭","🐰"]
+    };
+    let currentSet = emojiSet.male;
+    let leftEmoji = "";
+    let rightEmoji = "";
+    let gameTime = 30;
+    let streak = 0;
+    let score = 0;
+    let fever = false;
+    let direction = "left";
+    let timerInterval = null;
+    let feverTimeout = null;
+    let highScore = localStorage.getItem("doorGameHighScore") || 0;
+let emojiQueue = [];
+let previousEmojiCount = 2;
+
+    document.getElementById("highscore").innerText = "최고 점수: " + highScore;
+
+function startGame() {
+ leftEmoji = "";
+  rightEmoji = "";
+  document.getElementById("leftHint").innerHTML = "⬅️";
+  document.getElementById("rightHint").innerHTML = "➡️";
+
+  const list = document.getElementById('list').value;
+  currentSet = emojiSet[list];
+
+  emojiTagMap = {};
+  const shuffled = [...Array(6).keys()].map(i => i + 1).sort(() => Math.random() - 0.5);
+  currentSet.forEach((emoji, index) => {
+    emojiTagMap[emoji] = shuffled[index];
+  });
+
+  emojiQueue = [];
+  const emojiOptions = getEmojiSubset();
+  const leftGroup = currentSet.filter(e => [1,3,5].includes(emojiTagMap[e]) && emojiOptions.includes(e));
+  const rightGroup = currentSet.filter(e => [2,4,6].includes(emojiTagMap[e]) && emojiOptions.includes(e));
+  for (let i = 0; i < 10; i++) {
+    const direction = Math.random() > 0.5 ? 'left' : 'right';
+    const group = direction === 'left' ? leftGroup : rightGroup;
+    const emoji = group[Math.floor(Math.random() * group.length)] || "?";
+    emojiQueue.push({emoji, direction});
+  }
+  leftEmoji = currentSet.find(e => [1, 3, 5].includes(emojiTagMap[e])) || "?";
+  rightEmoji = currentSet.find(e => [2, 4, 6].includes(emojiTagMap[e])) || "?";
+  previousEmojiCount = 2;
+      
+      streak = 0;
+      score = 0;
+      gameTime = 30;
+      fever = false;
+      document.body.classList.remove('fever');
+      document.getElementById('bar').classList.remove('fever');
+      updateStatus();
+      newDirection();
+      updateHints();
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        if (!fever) {
+          gameTime--;
+          updateStatus();
+          if (gameTime <= 0) {
+            endGame();
+          }
+        }
+      }, 1000);
+    }
+
+    function endGame() {
+      clearInterval(timerInterval);
+      alert("게임 종료! 점수: " + score);
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem("doorGameHighScore", highScore);
+        document.getElementById("highscore").innerText = "최고 점수: " + highScore;
+      }
+    }
+
+    function updateStatus() {
+      document.getElementById('streak').innerText = streak;
+      if (!fever) {
+        document.getElementById('fever').innerText = "비활성";
+      }
+      document.getElementById('score').innerText = score;
+      const bar = document.getElementById('bar');
+      const barText = document.getElementById('bar-text');
+      const percent = Math.max(0, gameTime / 30 * 100);
+      bar.style.width = percent + "%";
+      barText.innerText = gameTime + "초";
+      if (fever) {
+        bar.style.background = "gray";
+      } else if (gameTime <= 10) {
+        bar.style.background = "red";
+      } else if (gameTime <= 20) {
+        bar.style.background = "orange";
+      } else {
+        bar.style.background = "#4caf50";
+      }
+    }
+
+    function getEmojiSubset() {
+  let maxTag = 2;
+  if (gameTime <= 10) maxTag = 6;
+  else if (gameTime <= 20) maxTag = 4;
+  return currentSet.filter(e => emojiTagMap[e] <= maxTag);
+}
+
+     function newDirection() {
+  const queueContainer = document.getElementById("emojiQueue");
+  queueContainer.innerHTML = emojiQueue.map((e, i) => {
+    const offset = (emojiQueue.length - 1 - i) * 30;
+    return `<div class="emoji" style="position: absolute; top: ${offset}px; left: 0; z-index: ${emojiQueue.length - i};">${e.emoji}</div>`;
+  }).join("");
+} 
+
+    function choose(choice) {
+  if (gameTime <= 0 || emojiQueue.length === 0) return;
+  const front = emojiQueue[0];
+  if (fever || choice === front.direction) {
+    if (!fever) streak++;
+    score++;
+    if (streak >= 20 && !fever) {
+      activateFever();
+    }
+  } else {
+    streak = 0;
+    gameTime = Math.max(0, gameTime - 1);
+  }
+  emojiQueue.shift();
+  const emojiOptions = getEmojiSubset();
+  const leftGroup = currentSet.filter(e => [1,3,5].includes(emojiTagMap[e]) && emojiOptions.includes(e));
+  const rightGroup = currentSet.filter(e => [2,4,6].includes(emojiTagMap[e]) && emojiOptions.includes(e));
+  const direction = Math.random() > 0.5 ? 'left' : 'right';
+  const group = direction === 'left' ? leftGroup : rightGroup;
+  const emoji = group[Math.floor(Math.random() * group.length)] || "?";
+  emojiQueue.push({emoji, direction});
+  updateStatus();
+  newDirection();
+  updateHints();
+    }
+
+    function activateFever() {
+  fever = true;
+  streak = 0;
+  document.body.classList.add('fever');
+  document.getElementById('bar').classList.add('fever');
+
+  let countdown = 3;
+  const feverStatus = document.getElementById('fever');
+  feverStatus.innerText = countdown;
+
+  const feverCountdown = setInterval(() => {
+    countdown--;
+    if (countdown > 0) {
+      feverStatus.innerText = countdown;
+    } else {
+      clearInterval(feverCountdown);
+    }
+  }, 1000);
+
+  clearInterval(timerInterval);
+
+  feverTimeout = setTimeout(() => {
+    fever = false;
+    feverStatus.innerText = "비활성";
+    document.body.classList.remove('fever');
+    document.getElementById('bar').classList.remove('fever');
+    updateStatus();
+
+    timerInterval = setInterval(() => {
+      gameTime--;
+      updateStatus();
+      if (gameTime <= 0) {
+        endGame();
+      }
+    }, 1000);
+  }, 3000);
+    }
+
+document.addEventListener('keyup', function(e) {
+	const active = document.activeElement;
+ 	if (e.key === 'Enter') {
+		if (active && active.id === 'startButton') return;
+		const startBtn = document.getElementById('startButton');
+		if (startBtn) startBtn.click();
+	}
+		if (e.key === 'ArrowLeft') choose('left');
+  		else if (e.key === 'ArrowRight') choose('right');
+	
+});
+
+  function updateHints() {
+  const visibleLeft = getEmojiSubset().filter(e => [1, 3, 5].includes(emojiTagMap[e]));
+  const visibleRight = getEmojiSubset().filter(e => [2, 4, 6].includes(emojiTagMap[e]));
+  document.getElementById("leftHint").innerHTML = '⬅️<br>' + visibleLeft.join('<br>');
+  document.getElementById("rightHint").innerHTML = '➡️<br>' + visibleRight.join('<br>');
+}
+function resetHighScore() {
+  localStorage.removeItem("doorGameHighScore");
+  highScore = 0;
+  document.getElementById("highscore").innerText = "최고 점수: 0";
+  alert("최고 점수가 초기화되었습니다.");
+}
+
+</script>
+</body>
+</html>
